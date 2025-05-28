@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Next-Gen To-Do List</title>
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --text: #1f2937;
+      --accent: #2563eb;
+      --light-gray: #9ca3af;
+      --danger: #ef4444;
+      --dark-bg: #1f2937;
+      --dark-card: #374151;
+      --dark-text: #f9fafb;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 20px;
+      min-height: 100vh;
+      transition: 0.3s;
+    }
+
+    .container {
+      background: var(--card);
+      padding: 30px;
+      width: 100%;
+      max-width: 600px;
+      border-radius: 20px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    input {
+      flex: 1;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      outline: none;
+    }
+
+    button {
+      padding: 12px 20px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      background: #f9fafb;
+      margin-bottom: 10px;
+      padding: 15px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: 0.3s;
+      flex-wrap: wrap;
+    }
+
+    li.completed .text {
+      text-decoration: line-through;
+      color: gray;
+    }
+
+    .text {
+      flex: 1;
+      margin-right: 10px;
+      word-wrap: break-word;
+    }
+
+    .timestamp {
+      font-size: 12px;
+      color: var(--light-gray);
+    }
+
+    .controls {
+      display: flex;
+      gap: 5px;
+      margin-top: 10px;
+    }
+
+    .filters {
+      margin: 20px 0 10px;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .filters button {
+      background: #e5e7eb;
+      color: black;
+    }
+
+    .filters button.active {
+      background: var(--accent);
+      color: white;
+    }
+
+    .bottom {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .dark-toggle {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: #111827;
+    }
+
+    /* Dark mode */
+    body.dark {
+      --bg: var(--dark-bg);
+      --card: var(--dark-card);
+      --text: var(--dark-text);
+    }
+
+    body.dark input,
+    body.dark li {
+      background: #4b5563;
+      color: white;
+    }
+
+    body.dark .filters button {
+      background: #6b7280;
+    }
+
+    @media (max-width: 480px) {
+      .input-group {
+        flex-direction: column;
+      }
+
+      button {
+        width: 100%;
+      }
+
+      .bottom, .filters {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .dark-toggle {
+        padding: 10px;
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <button class="dark-toggle" onclick="toggleDarkMode()">🌙 Toggle Theme</button>
+  <div class="container">
+    <h1>📝 My To-Do List</h1>
+    <div class="input-group">
+      <input type="text" id="taskInput" placeholder="Add a task and press enter or click add" />
+      <button onclick="addTask()">Add</button>
+    </div>
+
+    <ul id="taskList"></ul>
+
+    <div class="filters">
+      <button onclick="setFilter('all')" class="active">All</button>
+      <button onclick="setFilter('active')">Active</button>
+      <button onclick="setFilter('completed')">Completed</button>
+    </div>
+
+    <div class="bottom">
+      <div id="counter">0 tasks</div>
+      <button onclick="clearCompleted()" style="background: var(--danger)">Clear Completed</button>
+    </div>
+  </div>
+
+  <script>
+    const input = document.getElementById("taskInput");
+    const taskList = document.getElementById("taskList");
+    const counter = document.getElementById("counter");
+
+    let filter = 'all';
+
+    window.onload = () => {
+      loadTasks();
+      if (localStorage.getItem("dark") === "true") document.body.classList.add("dark");
+    };
+
+    input.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") addTask();
+    });
+
+    function addTask() {
+      const text = input.value.trim();
+      if (!text) return;
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <div class="text">${text}<div class="timestamp">${new Date().toLocaleString()}</div></div>
+        <div class="controls">
+          <button onclick="toggleComplete(this)">✔</button>
+          <button onclick="editTask(this)">✏️</button>
+          <button onclick="deleteTask(this)">🗑️</button>
+        </div>
+      `;
+      li.classList.add("task");
+      li.dataset.completed = "false";
+      taskList.appendChild(li);
+      input.value = "";
+      saveTasks();
+      updateCounter();
+      applyFilter();
+    }
+
+    function toggleComplete(btn) {
+      const li = btn.closest("li");
+      const completed = li.dataset.completed === "true";
+      li.dataset.completed = !completed;
+      li.classList.toggle("completed", !completed);
+      saveTasks();
+      updateCounter();
+      applyFilter();
+    }
+
+    function deleteTask(btn) {
+      btn.closest("li").remove();
+      saveTasks();
+      updateCounter();
+    }
+
+    function editTask(btn) {
+      const li = btn.closest("li");
+      const textDiv = li.querySelector(".text");
+      const current = textDiv.childNodes[0].textContent.trim();
+      const updated = prompt("Edit your task:", current);
+      if (updated !== null) {
+        textDiv.childNodes[0].textContent = updated + " ";
+        saveTasks();
+      }
+    }
+
+    function clearCompleted() {
+      [...taskList.children].forEach(li => {
+        if (li.dataset.completed === "true") li.remove();
+      });
+      saveTasks();
+      updateCounter();
+    }
+
+    function setFilter(f) {
+      filter = f;
+      document.querySelectorAll(".filters button").forEach(btn => btn.classList.remove("active"));
+      document.querySelector(`.filters button[onclick="setFilter('${f}')"]`).classList.add("active");
+      applyFilter();
+    }
+
+    function applyFilter() {
+      [...taskList.children].forEach(li => {
+        const isCompleted = li.dataset.completed === "true";
+        li.style.display =
+          filter === "all" ||
+          (filter === "active" && !isCompleted) ||
+          (filter === "completed" && isCompleted)
+            ? "flex"
+            : "none";
+      });
+    }
+
+    function updateCounter() {
+      const total = [...taskList.children].filter(li => li.dataset.completed === "false").length;
+      counter.textContent = `${total} task${total !== 1 ? 's' : ''}`;
+    }
+
+    function saveTasks() {
+      localStorage.setItem("tasks", taskList.innerHTML);
+    }
+
+    function loadTasks() {
+      const saved = localStorage.getItem("tasks");
+      if (saved) {
+        taskList.innerHTML = saved;
+        [...taskList.children].forEach(li => {
+          if (li.dataset.completed === "true") {
+            li.classList.add("completed");
+          }
+        });
+        updateCounter();
+        applyFilter();
+      }
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark");
+      localStorage.setItem("dark", document.body.classList.contains("dark"));
+    }
+  </script>
+</body>
+</html>
